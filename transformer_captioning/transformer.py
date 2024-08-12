@@ -49,9 +49,14 @@ class MultiHeadAttentionLayer(AttentionLayer):
        
         super().__init__(embed_dim, dropout)
         self.num_heads = num_heads
+        self.head_dim = embed_dim // num_heads
+        assert self.head_dim * num_heads == embed_dim, "embed_dim must be divisible by num_heads"
 
+        #done
         # TODO: Initialize the following layers and parameters to perform attention
-        self.head_proj = ...
+        self.head_proj = nn.Linear(embed_dim, embed_dim * 3)
+        self.out_proj = nn.Linear(embed_dim, embed_dim)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, query, key, value, attn_mask=None):
         H = self.num_heads
@@ -59,31 +64,43 @@ class MultiHeadAttentionLayer(AttentionLayer):
         N, T, D = value.shape
         assert key.shape == value.shape
 
+        qkv = self.head_proj(query).view(N, S, H, 3 * self.head_dim)
+        query, key, value = qkv.chunk(3, dim=-1)
+
         # TODO : Compute multi-head attention
- 
+
+        #done
         #project query, key and value
         #after projection, split the embedding across num_heads
         #eg - expected shape for value is (N, H, T, D/H)
-        query = ...
-        key = ...
-        value = ...
+        query = query.permute(0, 2, 1, 3)  
+        key = key.permute(0, 2, 1, 3)      
+        value = value.permute(0, 2, 1, 3)
 
+
+        #done
         #compute dot-product attention separately for each head. Don't forget the scaling value!
         #Expected shape of dot_product is (N, H, S, T)
-        dot_product = ...
+        dot_product = torch.matmul(query, key.transpose(-2, -1)) / (self.head_dim ** 0.5)
 
         if attn_mask is not None:
+            #done
             # convert att_mask which is multiplicative, to an additive mask
             # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Think about what inputs make softmax 0.
-            additive_mask = ...
+            additive_mask = attn_mask.unsqueeze(1).unsqueeze(2)
             dot_product += additive_mask
-        
-        # apply softmax, dropout, and use value
-        y = ...
 
+        #done
+        # apply softmax, dropout, and use value
+        attn_weights = F.softmax(dot_product, dim=-1)
+        attn_weights = self.dropout(attn_weights)
+        y = y = torch.matmul(attn_weights, value)
+
+        #done
         # concat embeddings from different heads, and project
-        output = ...
+        y = y.transpose(1, 2).contiguous().view(N, S, D)
+        output = self.out_proj(y)
         return output
 
 
