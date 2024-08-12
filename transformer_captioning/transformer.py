@@ -106,51 +106,47 @@ class MultiHeadAttentionLayer(AttentionLayer):
 
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_dim, dropout=0.1, max_len=5000):
-        super().__init__()
-        # TODO - use torch.nn.Embedding to create the encoding. Initialize dropout layer.
-        self.encoding = ... 
-        self.dropout = ...
-      
-    def forward(self, x):
-        N, S, D = x.shape
-        # TODO - add the encoding to x
+        super(PositionalEncoding, self).__init__()
+        self.dropout = nn.Dropout(dropout)
+        position = torch.arange(0, max_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, embed_dim, 2) * -(math.log(10000.0) / embed_dim))
+        pe = torch.zeros(max_len, 1, embed_dim)
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        self.register_buffer('pe', pe)
 
-        output = x + ...
-        output = self.dropout(output)
-   
-        return output
+    def forward(self, x):
+        x = x + self.pe[:x.size(0)]
+        return self.dropout(x)
+
 
 
 class SelfAttentionBlock(nn.Module):
-
     def __init__(self, input_dim, num_heads, dropout=0.1):
-        super().__init__()
-        # TODO: Initialize the following. Use MultiHeadAttentionLayer for self_attn.
-        self.self_attn = ...
-        self.dropout = ...
-        self.layernorm = ...
-       
-    def forward(self, seq, mask):
-        ############# TODO - Self-attention on the sequence, using the mask. Add dropout to attention layer output.
-        # Then add a residual connection to the original input, and finally apply normalization. #############################
+        super(SelfAttentionBlock, self).__init__()
+        self.self_attn = MultiHeadAttentionLayer(input_dim, num_heads, dropout)
+        self.norm = nn.LayerNorm(input_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, seq, mask=None):
+        attn_output = self.self_attn(seq, seq, seq, mask)
+        attn_output = self.dropout(attn_output)
+        out = self.norm(attn_output + seq)
         return out
 
 class CrossAttentionBlock(nn.Module):
-
     def __init__(self, input_dim, num_heads, dropout=0.1):
-        super().__init__()
-        # TODO: Initialize the following. Use MultiHeadAttentionLayer for cross_attn.
-        self.cross_attn = nn.MultiheadAttention(embed_dim=input_dim, num_heads=num_heads, dropout=dropout)
-        self.dropout = nn.Dropout(dropout)
+        super(CrossAttentionBlock, self).__init__()
+        self.cross_attn = MultiHeadAttentionLayer(input_dim, num_heads, dropout)
         self.norm = nn.LayerNorm(input_dim)
-       
-    def forward(self, seq, cond):
-        ############# TODO - Cross-attention on the sequence, using conditioning. Add dropout to attention layer output.
-        # Then add a residual connection to the original input, and finally apply normalization. #############################
-        attn_output, _ = self.cross_attn(query=seq, key=cond, value=cond)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, seq, cond, mask=None):
+        attn_output = self.cross_attn(seq, cond, cond, mask)
         attn_output = self.dropout(attn_output)
-        out = self.norm(seq + attn_output)
+        out = self.norm(attn_output + seq)
         return out
+
 
 class FeedForwardBlock(nn.Module):
     def __init__(self, input_dim, num_heads, dim_feedforward=2048, dropout=0.1 ):
