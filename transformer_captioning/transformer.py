@@ -7,9 +7,9 @@ import torch.nn as nn
 from torch.nn import functional as F
 #done
 class AttentionLayer(nn.Module):
-    
+
     def __init__(self, embed_dim, dropout=0.1):
-       
+
         super().__init__()
         self.embed_dim = embed_dim
         self.query_proj = nn.Linear(embed_dim, embed_dim)
@@ -18,30 +18,30 @@ class AttentionLayer(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-            
+
     def forward(self, query, key, value, attn_mask=None):
         N, S, D = query.shape
         N, T, D = value.shape
         assert key.shape == value.shape
-       
+
         # TODO : Compute attention 
-    
+
         query = self.query_proj(query)
         key = self.key_proj(key)
         value = self.value_proj(value)
 
         #compute dot-product attention. Don't forget the scaling value!
         #Expected shape of dot_product is (N, S, T)
-       dot_product = torch.bmm(query, key.transpose(1, 2)) / math.sqrt(self.embed_dim)
+        dot_product = torch.bmm(query, key.transpose(1, 2)) / math.sqrt(self.embed_dim) # Indent this line to match the level of 'query = self.query_proj(query)'
 
-    if attn_mask is not None:
-        additive_mask = attn_mask.masked_fill(attn_mask == 0, float('-1e20'))
-        dot_product += additive_mask
+        if attn_mask is not None:
+            additive_mask = attn_mask.masked_fill(attn_mask == 0, float('-1e20'))
+            dot_product += additive_mask
 
-    attention = torch.softmax(dot_product, dim=-1)
-    attention = self.dropout(attention)
-    y = torch.bmm(attention, value)
-    return y
+        attention = torch.softmax(dot_product, dim=-1)
+        attention = self.dropout(attention)
+        y = torch.bmm(attention, value)
+        return y
 
 class MultiHeadAttentionLayer(AttentionLayer):
 
