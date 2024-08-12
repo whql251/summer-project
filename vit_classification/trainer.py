@@ -47,11 +47,10 @@ class Trainer:
                 - labels: PyTorch Tensor of shape (N,) giving labels for each input
         """
 
-        
+        #Done
         # TODO - Compute cross entropy loss between predictions and labels. 
-        loss = None
+        loss=torch.nn.functional.cross_entropy(predictions,labels,reduction='mean')
         
-
         return loss
 
     def train(self):
