@@ -5,20 +5,19 @@ import math
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-
+#done
 class AttentionLayer(nn.Module):
-
+    
     def __init__(self, embed_dim, dropout=0.1):
        
         super().__init__()
         self.embed_dim = embed_dim
-        # TODO: Initialize the following layers and parameters to perform attention
-        # This class assumes that the input dimension for query, key and value is embed_dim
-        self.query_proj = ...
-        self.key_proj = ...
-        self.value_proj = ...
+        self.query_proj = nn.Linear(embed_dim, embed_dim)
+        self.key_proj = nn.Linear(embed_dim, embed_dim)
+        self.value_proj = nn.Linear(embed_dim, embed_dim)
 
-        self.dropout = ...
+        self.dropout = nn.Dropout(dropout)
+
             
     def forward(self, query, key, value, attn_mask=None):
         N, S, D = query.shape
@@ -27,25 +26,22 @@ class AttentionLayer(nn.Module):
        
         # TODO : Compute attention 
     
-        #project query, key and value  - 
-        query = ...
-        key = ...
-        value = ...
+        query = self.query_proj(query)
+        key = self.key_proj(key)
+        value = self.value_proj(value)
 
         #compute dot-product attention. Don't forget the scaling value!
         #Expected shape of dot_product is (N, S, T)
-        dot_product = ...
+       dot_product = torch.bmm(query, key.transpose(1, 2)) / math.sqrt(self.embed_dim)
 
-        if attn_mask is not None:
-            # convert att_mask which is multiplicative, to an additive mask
-            # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
-            # Think about what inputs make softmax 0.
-            additive_mask = ...
-            dot_product += additive_mask
-        
-        # apply softmax, dropout, and use value
-        y = ...
-        return y  
+    if attn_mask is not None:
+        additive_mask = attn_mask.masked_fill(attn_mask == 0, float('-1e20'))
+        dot_product += additive_mask
+
+    attention = torch.softmax(dot_product, dim=-1)
+    attention = self.dropout(attention)
+    y = torch.bmm(attention, value)
+    return y
 
 class MultiHeadAttentionLayer(AttentionLayer):
 
