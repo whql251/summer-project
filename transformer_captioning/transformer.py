@@ -60,7 +60,7 @@ class MultiHeadAttentionLayer(AttentionLayer):
 
     def forward(self, query, key, value, attn_mask=None):
         H = self.num_heads
-
+        # print(query.shape)
         N, S, D = query.shape
         N, T, D = value.shape
         assert key.shape == value.shape
@@ -118,10 +118,14 @@ class PositionalEncoding(nn.Module):
         pe = torch.zeros(max_len, 1, embed_dim)
         pe[:, 0, 0::2] = torch.sin(position * div_term)
         pe[:, 0, 1::2] = torch.cos(position * div_term)
+        # print(pe.shape)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
+        # print(self.pe.shape)
+        x=x.transpose(0,1)
         x = x + self.pe[:x.size(0)]
+        x=x.transpose(0,1)
         return self.dropout(x)
 
 
@@ -237,8 +241,10 @@ class TransformerDecoder(nn.Module):
         
         feature_embedding=self.feature_embedding(features)
         feature_embedding=feature_embedding.unsqueeze(1)
+        # print(captions.shape)
         
         caption_embedding=self.caption_embedding(captions)
+        # print(caption_embedding.shape)
         caption_embedding=self.positional_encoding(caption_embedding)
          
         return feature_embedding, caption_embedding

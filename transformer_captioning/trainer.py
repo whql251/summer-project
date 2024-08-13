@@ -25,8 +25,10 @@ class Trainer(object):
         #TODO - Compute cross entropy loss between predictions and labels. 
         #Make sure to compute this loss only for indices where label is not the null token.
         #The loss should be averaged over batch and sequence dimensions. 
-        predictions=predictions.view(-1,predictions.size(-1))
-        labels=labels.view(-1)
+        
+        # predictions=predictions.view(-1,predictions.size(-1))
+        predictions=predictions.reshape(predictions.size(0)*predictions.size(1),predictions.size(2))
+        labels=labels.reshape(labels.size(0)*labels.size(1))
         
         mask=(labels != self.model._null)
         
@@ -62,7 +64,7 @@ class Trainer(object):
             for batch in self.train_dataloader:
                 features, captions = batch[0].to(self.device), batch[1].to(self.device)
                 logits = self.model(features, captions[:, :-1])
-
+                # print(captions[:,1:].shape)
                 loss = self.loss(logits, captions[:, 1:])
                 self.optim.zero_grad()
                 loss.backward()
