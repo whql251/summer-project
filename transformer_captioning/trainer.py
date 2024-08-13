@@ -28,7 +28,7 @@ class Trainer(object):
         
         # predictions=predictions.view(-1,predictions.size(-1))
         predictions=predictions.reshape(predictions.size(0)*predictions.size(1),predictions.size(2))
-        labels=labels.reshape(labels.size(0)*labels.size(1))
+        labels=labels.reshape(labels.size(0)*labels.size(1)).long()
         
         mask=(labels != self.model._null)
         
