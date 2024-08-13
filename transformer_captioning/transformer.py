@@ -222,19 +222,29 @@ class TransformerDecoder(nn.Module):
         self.to(device)
 
     def get_data_embeddings(self, features, captions):
+        #done
         # TODO - get caption and feature embeddings 
         # Don't forget position embeddings for captions!
         # expected caption embedding output shape : (N, T, D)
 
         # Unsqueeze feature embedding along dimension 1
-        # expected feature embedding output shape : (N, 1, D) 
+        # expected feature embedding output shape :  
+        feature_embedding = self.feature_embedding(features) 
+        feature_embedding = feature_embedding.unsqueeze(1)  
+        caption_embedding = self.caption_embedding(captions)  
+        caption_embedding = self.positional_encoding(caption_embedding)  
+
+        
         return feature_embedding, caption_embedding
 
     def get_causal_mask(self, _len):
+        #done
         #TODO - get causal mask. This should be a matrix of shape (_len, _len). 
         # This mask is multiplicative
         # setting mask[i,j] = 0 means jth element of the sequence is not used 
         # to predict the ith element of the sequence.
+         mask = torch.tril(torch.ones((_len, _len), device=self.device))  
+         mask = mask.unsqueeze(0).unsqueeze(0)  # (1, 1, T, T)
         return mask
                                       
     def forward(self, features, captions):
