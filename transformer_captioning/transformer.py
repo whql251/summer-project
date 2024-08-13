@@ -60,6 +60,7 @@ class MultiHeadAttentionLayer(AttentionLayer):
 
     def forward(self, query, key, value, attn_mask=None):
         H = self.num_heads
+
         N, S, D = query.shape
         N, T, D = value.shape
         assert key.shape == value.shape
@@ -235,10 +236,10 @@ class TransformerDecoder(nn.Module):
         # expected feature embedding output shape : (N, 1, D)
         
         feature_embedding=self.feature_embedding(features)
-        feature_embedding=self.positional_encoding(feature_embedding)
+        feature_embedding=feature_embedding.unsqueeze(1)
         
         caption_embedding=self.caption_embedding(captions)
-        caption_embedding=caption_embedding.unsqueeze(1)
+        caption_embedding=self.positional_encoding(caption_embedding)
          
         return feature_embedding, caption_embedding
 
