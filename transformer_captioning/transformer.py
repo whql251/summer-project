@@ -73,6 +73,7 @@ class MultiHeadAttentionLayer(AttentionLayer):
         #project query, key and value
         #after projection, split the embedding across num_heads
         #eg - expected shape for value is (N, H, T, D/H)
+        
         query = query.permute(0, 2, 1, 3)  
         key = key.permute(0, 2, 1, 3)      
         value = value.permute(0, 2, 1, 3)
@@ -88,7 +89,10 @@ class MultiHeadAttentionLayer(AttentionLayer):
             # convert att_mask which is multiplicative, to an additive mask
             # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Think about what inputs make softmax 0.
-            additive_mask = attn_mask.unsqueeze(0).unsqueeze(0)
+            
+            additive_mask = attn_mask.masked_fill(attn_mask==0,float('-1e20'))
+            additive_mask = additive_mask.masked_fill(additive_mask==1,0)
+            additive_mask = additive_mask.unsqueeze(0).unsqueeze(0)
             dot_product += additive_mask
 
         #done
@@ -222,19 +226,31 @@ class TransformerDecoder(nn.Module):
         self.to(device)
 
     def get_data_embeddings(self, features, captions):
+        # done
         # TODO - get caption and feature embeddings 
         # Don't forget position embeddings for captions!
         # expected caption embedding output shape : (N, T, D)
 
         # Unsqueeze feature embedding along dimension 1
-        # expected feature embedding output shape : (N, 1, D) 
+        # expected feature embedding output shape : (N, 1, D)
+        
+        feature_embedding=self.feature_embedding(features)
+        feature_embedding=self.positional_encoding(feature_embedding)
+        
+        caption_embedding=self.caption_embedding(captions)
+        caption_embedding=caption_embedding.unsqueeze(1)
+         
         return feature_embedding, caption_embedding
 
     def get_causal_mask(self, _len):
+        # done
         #TODO - get causal mask. This should be a matrix of shape (_len, _len). 
         # This mask is multiplicative
         # setting mask[i,j] = 0 means jth element of the sequence is not used 
         # to predict the ith element of the sequence.
+        
+        mask=torch.tril(torch.ones(_len,_len)).to(self.device)
+        
         return mask
                                       
     def forward(self, features, captions):
