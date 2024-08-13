@@ -151,16 +151,30 @@ class CrossAttentionBlock(nn.Module):
 class FeedForwardBlock(nn.Module):
     def __init__(self, input_dim, num_heads, dim_feedforward=2048, dropout=0.1 ):
         super().__init__()
+        # done
         # TODO: Initialize the following. 
         # MLP has the following layers : linear, relu, dropout, linear ; hidden dim of linear is given by dim_feedforward
-        self.mlp = ...
-        self.dropout = ...
-        self.norm = ...
+        self.mlp1 = nn.Linear(input_dim,dim_feedforward)
+        self.mlp2 = nn.Linear(dim_feedforward,input_dim)
+        self.dropout = nn.Dropout(dropout)
+        self.norm = nn.LayerNorm(input_dim)
        
 
     def forward(self, seq):
+        # done
          ############# TODO - MLP on the sequence. Add dropout to mlp layer output.
         # Then add a residual connection to the original input, and finally apply normalization. #############################
+        
+        out=self.mlp1(seq)
+        
+        out=F.relu(out)
+        
+        out=self.dropout(out)
+        
+        out=self.mlp2(out)
+        
+        out=self.norm(seq + out)
+        
         return out
 
 class DecoderLayer(nn.Module):
