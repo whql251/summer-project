@@ -77,6 +77,15 @@ class ViT(nn.Module):
         # TODO - Break images into a grid of patches
         # Feel free to use pytorch built-in functions to do this
         
+        N,C,H,W=images.shape
+        assert H%self.patch_dim==0 and W%self.patch_dim==0
+        
+        num_patches=(H//self.patch_dim)*(W//self.patch_dim)
+        
+        images=images.unfold(3,self.patch_dim,self.patch_dim).unfold(2,self.patch_dim,self.patch_dim)
+        images=images.contiguous().view(N,C,num_patches,self.patch_dim*self.patch_dim)
+        images=images.permute(0,2,1,3).contiguous().view(N,num_patches,self.patch_dim*self.patch_dim*3)
+        
         return images
 
     def forward(self, images):
