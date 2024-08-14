@@ -117,24 +117,39 @@ class MultiHeadAttentionLayer(AttentionLayer):
         return output
 
 
+# class PositionalEncoding(nn.Module):
+#     def __init__(self, embed_dim, dropout=0.1, max_len=5000):
+#         super(PositionalEncoding, self).__init__()
+#         self.dropout = nn.Dropout(dropout)
+#         position = torch.arange(0, max_len).unsqueeze(1)
+#         div_term = torch.exp(torch.arange(0, embed_dim, 2) * -(math.log(10000.0) / embed_dim))
+#         pe = torch.zeros(max_len, embed_dim)
+#         pe[:, 0::2] = torch.sin(position * div_term)
+#         pe[:, 1::2] = torch.cos(position * div_term)
+#         pe=pe.unsqueeze(0)
+#         # print(pe.shape)
+#         self.register_buffer('pe', pe)
+
+#     def forward(self, x):
+#         # print(self.pe.shape)
+#         # print(self.pe[:,:x.size(1)].shape)
+#         x = x + self.pe[:,:x.size(1)]
+#         return self.dropout(x)
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_dim, dropout=0.1, max_len=5000):
-        super(PositionalEncoding, self).__init__()
+        super().__init__()
+        # TODO - use torch.nn.Embedding to create the encoding. Initialize dropout layer.
+        self.encoding = nn.Embedding(max_len, embed_dim)
         self.dropout = nn.Dropout(dropout)
-        position = torch.arange(0, max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, embed_dim, 2) * -(math.log(10000.0) / embed_dim))
-        pe = torch.zeros(max_len, embed_dim)
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe=pe.unsqueeze(0)
-        # print(pe.shape)
-        self.register_buffer('pe', pe)
-
+      
     def forward(self, x):
-        # print(self.pe.shape)
-        # print(self.pe[:,:x.size(1)].shape)
-        x = x + self.pe[:,:x.size(1)]
-        return self.dropout(x)
+        N, S, D = x.shape
+        # TODO - add the encoding to x
+
+        output = x + self.encoding(torch.arange(S, device=x.device).unsqueeze(0).expand(N,S))
+        output = self.dropout(output)
+   
+        return output
 
 
 
