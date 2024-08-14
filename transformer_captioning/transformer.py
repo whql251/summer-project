@@ -35,7 +35,7 @@ class AttentionLayer(nn.Module):
         dot_product = torch.bmm(query, key.transpose(1, 2)) / math.sqrt(self.embed_dim) # Indent this line to match the level of 'query = self.query_proj(query)'
 
         if attn_mask is not None:
-            additive_mask = attn_mask.masked_fill(attn_mask == 0, float('-1e20'))
+            additive_mask = attn_mask.masked_fill(attn_mask == 0, float('-1e9'))
             dot_product += additive_mask
 
         attention = torch.softmax(dot_product, dim=-1)
@@ -54,7 +54,7 @@ class MultiHeadAttentionLayer(AttentionLayer):
 
         #done
         # TODO: Initialize the following layers and parameters to perform attention
-        self.head_proj = nn.Linear(embed_dim, embed_dim * 3)
+        # self.head_proj = nn.Linear(embed_dim, embed_dim * 3)
         self.out_proj = nn.Linear(embed_dim, embed_dim)
         self.dropout = nn.Dropout(dropout)
 
@@ -64,9 +64,9 @@ class MultiHeadAttentionLayer(AttentionLayer):
         N, S, D = query.shape
         N, T, D = value.shape
         assert key.shape == value.shape
-
-        qkv = self.head_proj(query).view(N, S, H, 3 * self.head_dim)
-        query, key, value = qkv.chunk(3, dim=-1)
+        # print(query.shape,key.shape,value.shape)
+        # qkv = self.head_proj(query).view(N, S, H, 3 * self.head_dim)
+        # query, key, value = qkv.chunk(3, dim=-1)
 
         # TODO : Compute multi-head attention
 
@@ -75,6 +75,11 @@ class MultiHeadAttentionLayer(AttentionLayer):
         #after projection, split the embedding across num_heads
         #eg - expected shape for value is (N, H, T, D/H)
         
+        # print(query.shape,key.shape,value.shape)
+        query=self.query_proj(query).view(N,S,H,self.head_dim)
+        key=self.key_proj(key).view(N,T,H,self.head_dim)
+        value=self.value_proj(value).view(N,T,H,self.head_dim)
+        # print(query.shape,key.shape,value.shape)
         query = query.permute(0, 2, 1, 3)  
         key = key.permute(0, 2, 1, 3)      
         value = value.permute(0, 2, 1, 3)
@@ -90,17 +95,20 @@ class MultiHeadAttentionLayer(AttentionLayer):
             # convert att_mask which is multiplicative, to an additive mask
             # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Think about what inputs make softmax 0.
-            
-            additive_mask = attn_mask.masked_fill(attn_mask==0,float('-1e20'))
+            # print(attn_mask[1])
+            additive_mask = attn_mask.masked_fill(attn_mask==0,float('-1e9'))
             additive_mask = additive_mask.masked_fill(additive_mask==1,0)
+            # print(additive_mask[1])
             additive_mask = additive_mask.unsqueeze(0).unsqueeze(0)
             dot_product += additive_mask
 
         #done
         # apply softmax, dropout, and use value
+        # print(dot_product[0])
         attn_weights = F.softmax(dot_product, dim=-1)
+        # print(attn_weights[0])
         attn_weights = self.dropout(attn_weights)
-        y = y = torch.matmul(attn_weights, value)
+        y = torch.matmul(attn_weights, value)
 
         #done
         # concat embeddings from different heads, and project
@@ -115,17 +123,17 @@ class PositionalEncoding(nn.Module):
         self.dropout = nn.Dropout(dropout)
         position = torch.arange(0, max_len).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, embed_dim, 2) * -(math.log(10000.0) / embed_dim))
-        pe = torch.zeros(max_len, 1, embed_dim)
-        pe[:, 0, 0::2] = torch.sin(position * div_term)
-        pe[:, 0, 1::2] = torch.cos(position * div_term)
+        pe = torch.zeros(max_len, embed_dim)
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe=pe.unsqueeze(0)
         # print(pe.shape)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
         # print(self.pe.shape)
-        x=x.transpose(0,1)
-        x = x + self.pe[:x.size(0)]
-        x=x.transpose(0,1)
+        # print(self.pe[:,:x.size(1)].shape)
+        x = x + self.pe[:,:x.size(1)]
         return self.dropout(x)
 
 
@@ -256,9 +264,10 @@ class TransformerDecoder(nn.Module):
         # setting mask[i,j] = 0 means jth element of the sequence is not used 
         # to predict the ith element of the sequence.
         
-        mask=torch.tril(torch.ones(_len,_len)).to(self.device)
+        # mask=torch.tril(torch.ones(_len,_len)).to(self.device)
+        mask=np.triu(np.ones((_len,_len)),k=1).astype('uint8')
         
-        return mask
+        return (torch.from_numpy(mask)==0).to(self.device)
                                       
     def forward(self, features, captions):
         """

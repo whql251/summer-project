@@ -63,6 +63,7 @@ class Trainer(object):
             num_batches = 0
             for batch in self.train_dataloader:
                 features, captions = batch[0].to(self.device), batch[1].to(self.device)
+                # print(captions)
                 logits = self.model(features, captions[:, :-1])
                 # print(captions[:,1:].shape)
                 loss = self.loss(logits, captions[:, 1:])
